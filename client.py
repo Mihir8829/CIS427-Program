@@ -177,7 +177,7 @@ def executeCMD(cmd: str):
         response = recieveMsg()
         if response[0:3] == "200":
             print(f"Found stock records matching you search: ")
-            
+
             stocks = response[7:].split()
             stocksList = []
             for stock in stocks:
@@ -185,7 +185,7 @@ def executeCMD(cmd: str):
                 stocksList.append(stockTuple)
 
             for stock in stocksList:
-                print(stock[0], stock[1], stock[3], stock[4])
+                print(stock[0], stock[2], stock[3], stock[4])
         elif response[0:3] == "404":
             print(response)
     elif cmd.lower()[0:4] == "list".lower():

@@ -42,6 +42,8 @@ except Exception as e:
 
 # DATABASE FUNCTIONS
 # returns user tuple with userID
+
+
 def getUserInfo(cur, userID):
     cur.execute("SELECT * FROM Users WHERE ID = " + str(userID))
     user = cur.fetchall()
@@ -51,6 +53,8 @@ def getUserInfo(cur, userID):
         return (user)
 
 # sends input string to client of max length MSGLEN
+
+
 def sendMsg(msg, cSocket):
     if cSocket in clientSockets:
         totalSent = 0
@@ -71,6 +75,8 @@ def sendMsg(msg, cSocket):
         print("msg '" + msg.strip() + "' sent with total bytes: " + str(totalSent))
 
 # recieves string from client
+
+
 def recieveMsg(cSocket):
     if cSocket in clientSockets:
         chunks = []
@@ -95,12 +101,15 @@ def recieveMsg(cSocket):
         return returnStr.strip()
 
 # returns user balance of user with userID
+
+
 def balance(cur, userID):
     UI = getUserInfo(cur, userID)
     if UI != None:
         return UI[0][5]
     else:
         return None
+
 
 def who():
     x = 0
@@ -113,6 +122,8 @@ def who():
     return who
 
 # deposit Funds in account
+
+
 def deposit(cur: sql.Cursor, deposit_amount, user_id):
     # Check if user exists in database
     query = "SELECT * FROM Users WHERE ID = ?"
@@ -129,6 +140,8 @@ def deposit(cur: sql.Cursor, deposit_amount, user_id):
         return (f"Deposited {deposit_amount} into the account of user {user_id}")
 
 # buy stock funciton
+
+
 def buy_stock(cur: sql.Cursor, ticker, quantity, stock_price, user_id):
     # Check if user has sufficient funds
     userBal = balance(cur, user_id)
@@ -156,6 +169,8 @@ def buy_stock(cur: sql.Cursor, ticker, quantity, stock_price, user_id):
     return "success"
 
 # sell stock function
+
+
 def sell_stock(cur: sql.Cursor, ticker, quantity, stock_price, user_id):
     query = "SELECT * FROM Stocks WHERE stock_symbol = ? AND user_id = ?"
     cur.execute(query, (ticker, user_id))
@@ -187,6 +202,8 @@ def sell_stock(cur: sql.Cursor, ticker, quantity, stock_price, user_id):
     return "success"
 
 # lookup function from PA2
+
+
 def lookup_stock(cur: sql.Cursor, stock_name, user_id):
     # Find all stocks that match the given name
     cur.execute("SELECT * FROM Stocks WHERE stock_symbol = ? AND user_id = ?",
@@ -200,18 +217,32 @@ def lookup_stock(cur: sql.Cursor, stock_name, user_id):
         # Otherwise, return a 200 OK response and the matching stock(s)
         response = f"200 OK "
         for stock in stocks:
-            response = response + f"[{stock[0]},{stock[1]},{stock[2]},{round(stock[3], 2)},{stock[4]}] "
+            response = response + \
+                f"[{stock[0]},{stock[1]},{stock[2]},{round(stock[3], 2)},{stock[4]}] "
         return response
 
 
 # returns a list of all stock tuples with user_id
-def list_stocks(cur, user_id):
-    query = "SELECT * FROM Stocks WHERE user_id = ?"
-    cur.execute(query, (user_id,))
-    stocks = cur.fetchall()
-    return stocks
-
+def list_stocks(cur, clientUID):
+    if clientUID:
+        query = "SELECT Users.user_name, Stocks.stock_symbol, Stocks.stock_balance FROM Users JOIN Stocks ON Users.ID = Stocks.user_id"
+        cur.execute(query,)
+        stocks = cur.fetchall()
+        sendstr = ""
+        for i, row in enumerate(stocks):
+            sendstr += f"{i+1} {row[0]} {row[1]} {row[2]}"
+        return sendstr
+    else:
+        query = "SELECT * FROM Stocks WHERE user_id = ?"
+        cur.execute(query, (clientUID,))
+        stocks = cur.fetchall()
+        sendString = ""
+        for stock in stocks:
+            sendString += f"[{stock[0]},{stock[1]},{stock[2]},{round(stock[3], 2)},{stock[4]}]"
+        return sendString
 # server shutdown command
+
+
 def shutdown():
     global status
     status = False
@@ -346,13 +377,9 @@ def threadLoop(clientSocket, clientIndex):
 
         # list user's stocks, user id is 1 by default
         elif msg.lower()[0:4] == "list".lower():
-            stocks = list_stocks(cur, clientUID)
-            sendString = ""
+            stocks = list_stocks(cur, usersOnline[clientIndex] == "root")
+            sendMsg("200 OK " + stocks, clientSocket)
 
-            for stock in stocks:
-                sendString = sendString + f"[{stock[0]},{stock[1]},{stock[2]},{round(stock[3], 2)},{stock[4]}] "
-
-            sendMsg("200 OK " + sendString, clientSocket)
         elif msg.lower()[0:3] == "buy".lower():  # buy function
             params = msg[4:].split()
             success = buy_stock(
